@@ -1,0 +1,25 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'com.github.johnrengelman.shadow' version '5.0.0'
+}
+
+dependencies {
+    implementation 'com.eclipsesource.minimal-json:minimal-json:0.9.5'
+    implementation 'commons-cli:commons-cli:1.4'
+    //testImplementation 'junit:junit:4.12'
+}
+
+repositories {
+    jcenter()
+}
+
+mainClassName = 'link.infra.packwiz.installer.bootstrap.Main'
+
+jar {
+    manifest {
+        attributes(
+            'Main-Class': 'link.infra.packwiz.installer.bootstrap.Main'
+        )
+    }
+}
