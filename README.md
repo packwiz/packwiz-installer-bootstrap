@@ -1,2 +1,2 @@
-# packwiz-launcher-bootstrap
-An updater for packwiz-launcher.
+# packwiz-installer-bootstrap
+An updater for packwiz-installer.
