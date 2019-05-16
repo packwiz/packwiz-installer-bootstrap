@@ -2,7 +2,6 @@ package link.infra.packwiz.installer.bootstrap;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
-import java.awt.EventQueue;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.event.ActionEvent;
@@ -12,29 +11,11 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
-import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 
 public class UpdateWindow {
 
-	private JFrame frmUpdatingPackwizlauncher;
-
-	/**
-	 * Launch the application.
-	 */
-	public static void main(String[] args) {
-		EventQueue.invokeLater(new Runnable() {
-			public void run() {
-				try {
-					UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-					UpdateWindow window = new UpdateWindow();
-					window.frmUpdatingPackwizlauncher.setVisible(true);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-		});
-	}
+	JFrame frmUpdatingPackwizlauncher;
 
 	/**
 	 * Create the application.

@@ -1,11 +1,13 @@
 package link.infra.packwiz.installer.bootstrap;
 
+import java.awt.EventQueue;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 
 import javax.swing.JOptionPane;
+import javax.swing.UIManager;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -25,6 +27,7 @@ public class Main {
 	private boolean skipUpdate = false;
 	private boolean useGUI = true;
 	private String jarPath = null;
+	private UpdateWindow window = null;
 
 	public static void main(String[] args) {
 		new Main(args); // Is this bad?
@@ -35,6 +38,21 @@ public class Main {
 			parseOptions(args);
 		} catch (ParseException e) {
 			showError(e, "There was an error parsing command line arguments:");
+			System.exit(1);
+		}
+		
+		if (useGUI) {
+			EventQueue.invokeLater(new Runnable() {
+				public void run() {
+					try {
+						UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+					} catch (Exception e) {
+						// Ignore the exceptions, just continue using the ugly L&F
+					}
+					window = new UpdateWindow();
+					window.frmUpdatingPackwizlauncher.setVisible(true);
+				}
+			});
 		}
 		
 		if (skipUpdate) {
@@ -45,7 +63,7 @@ public class Main {
 			} catch (Exception e) {
 				showError(e, "There was an error loading packwiz-installer:");
 			}
-			return;
+			System.exit(1);
 		}
 		
 		
@@ -54,6 +72,13 @@ public class Main {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		}
+		
+		try {
+			LoadJAR.start(args, jarPath);
+		} catch (Exception e) {
+			showError(e, "There was an error loading packwiz-installer:");
+			System.exit(1);
 		}
 	}
 	
