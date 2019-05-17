@@ -1,10 +1,14 @@
 package link.infra.packwiz.installer.bootstrap;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.jar.JarInputStream;
+import java.util.jar.Manifest;
 
 import org.apache.commons.cli.Options;
 
@@ -18,7 +22,7 @@ public class LoadJAR {
 		}
 		
 		if (path == null) {
-			path = "./packwiz-installer.jar";
+			path = Main.JAR_NAME;
 		}
 		
 		URLClassLoader child = new URLClassLoader(new URL[] { new File(path).toURI().toURL() },
@@ -45,5 +49,30 @@ public class LoadJAR {
 		
 		// Must be casted to Object (not array) because varargs
 		mainClass.getConstructor(String[].class).newInstance((Object)args);
+	}
+	
+	public static String getVersion(String path) {
+		if (path == null) {
+			path = Main.JAR_NAME;
+		}
+		
+		JarInputStream jarStream;
+		try {
+			jarStream = new JarInputStream(new FileInputStream(path));
+		} catch (IOException e) {
+			return null;
+		}
+		String version = null;
+		// Aggressive try/catching - what if there isn't a manifest?
+		try {
+			Manifest mf = jarStream.getManifest();
+			version = mf.getMainAttributes().getValue("Implementation-Version");
+		} catch (Exception e) {}
+		
+		// Clean up
+		try {
+			jarStream.close();
+		} catch (IOException e) {}
+		return version;
 	}
 }
