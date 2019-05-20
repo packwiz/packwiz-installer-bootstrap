@@ -4,11 +4,15 @@ import java.awt.EventQueue;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.InterruptedIOException;
+import java.io.Reader;
 import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.JOptionPane;
+import javax.swing.ProgressMonitor;
 import javax.swing.UIManager;
 
 import org.apache.commons.cli.CommandLine;
@@ -31,7 +35,8 @@ public class Main {
 	private boolean skipUpdate = false;
 	private boolean useGUI = true;
 	private String jarPath = null;
-	private UpdateWindow window = null;
+	
+	//private Lock 
 
 	public static void main(String[] args) {
 		new Main(args); // Is this bad?
@@ -44,6 +49,10 @@ public class Main {
 			showError(e, "There was an error parsing command line arguments:");
 			System.exit(1);
 		}
+		
+		if (jarPath == null) {
+			jarPath = JAR_NAME;
+		}
 
 		if (useGUI) {
 			EventQueue.invokeLater(new Runnable() {
@@ -53,8 +62,6 @@ public class Main {
 					} catch (Exception e) {
 						// Ignore the exceptions, just continue using the ugly L&F
 					}
-					window = new UpdateWindow();
-					window.frmUpdatingPackwizlauncher.setVisible(true);
 				}
 			});
 		}
@@ -89,6 +96,10 @@ public class Main {
 	private void doUpdate() throws IOException, GithubException {
 		String currVersion = LoadJAR.getVersion(jarPath);
 		Release ghRelease = requestRelease();
+		
+		if (ghRelease == null) {
+			return;
+		}
 
 		System.out.println("Current version is: " + currVersion);
 		System.out.println("New version is: " + ghRelease.tagName);
@@ -97,26 +108,23 @@ public class Main {
 			RollbackHandler backup = new RollbackHandler(jarPath);
 
 			downloadUpdate(ghRelease.downloadURL, jarPath);
-			try {
-				Thread.sleep(10000);
-			} catch (InterruptedException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
 
 			try {
 				backup.rollback();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+		} else {
+			System.out.println("Already up to date!");
 		}
 	}
 
 	private void showError(Exception e, String message) {
 		if (useGUI) {
 			e.printStackTrace();
-			JOptionPane.showMessageDialog(null, message + "\n" + e.getMessage(), "packwiz-installer-bootstrap",
-					JOptionPane.ERROR_MESSAGE);
+			JOptionPane.showMessageDialog(null,
+					message + "\n" + e.getClass().getCanonicalName() + ": " + e.getMessage(),
+					"packwiz-installer-bootstrap", JOptionPane.ERROR_MESSAGE);
 		} else {
 			System.out.println(message);
 			e.printStackTrace();
@@ -201,13 +209,103 @@ public class Main {
 			super("Invalid Github API response: " + message);
 		}
 	}
+	
+	class ConnMonitorInputStream extends InputStream {
+		private InputStream in = null;
+		private int size = -1;
+		private int bytesRead = 0;
+		private final URLConnection conn;
+		private final ProgressMonitor mon;
+
+		public ConnMonitorInputStream(URLConnection conn, String message, String note) {
+			this.conn = conn;
+			mon = new ProgressMonitor(null, message, note, 0, 1);
+			mon.setMillisToDecideToPopup(1);
+			mon.setMillisToPopup(1);
+		}
+		
+		private void setup() throws IOException {
+			if (in == null) {
+				mon.setProgress(0);
+				size = conn.getContentLength();
+				in = conn.getInputStream();
+				if (size > -1) {
+					mon.setMaximum(size);
+				}
+			}
+		}
+
+		public int available() {
+			if (size > -1) {
+				return (size - bytesRead);
+			} else {
+				return 1;
+			}
+		}
+		
+		private void setProgress() throws InterruptedIOException {
+			if (size > -1) {
+				mon.setProgress(bytesRead);
+			}
+			if (mon.isCanceled()) {
+				throw new InterruptedIOException("Download cancelled!");
+			}
+		}
+
+		public int read() throws IOException {
+			setup();
+			int b = in.read();
+			if (b != -1) {
+				bytesRead++;
+				setProgress();
+			}
+			return b;
+		}
+
+		public int read(byte[] b) throws IOException {
+			setup();
+			int read = in.read(b);
+			bytesRead += read;
+			setProgress();
+			return read;
+		}
+
+		public int read(byte[] b, int off, int len) throws IOException {
+			setup();
+			int read = in.read(b, off, len);
+			bytesRead += read;
+			setProgress();
+			return read;
+		}
+		
+		public void close() throws IOException {
+			super.close();
+			mon.close();
+		}
+	}
 
 	private Release requestRelease() throws IOException, GithubException {
 		Release rel = new Release();
 
 		URL url = new URL(updateURL);
-		InputStream dataStream = url.openStream();
-		JsonObject object = Json.parse(new InputStreamReader(dataStream)).asObject();
+		URLConnection conn = url.openConnection();
+		// 30 second read timeout
+		conn.setReadTimeout(30 * 1000);
+		InputStream in;
+		if (useGUI) {
+			in = new ConnMonitorInputStream(conn, "Updating packwiz-installer...", null);
+		} else {
+			in = conn.getInputStream();
+		}
+		Reader streamReader = new InputStreamReader(in);
+		JsonObject object;
+		try {
+			object = Json.parse(streamReader).asObject();
+		} catch (InterruptedIOException e) {
+			System.out.println("Update check cancelled!");
+			return null;
+		}
+		streamReader.close();
 
 		JsonValue tagName = object.get("tag_name");
 		if (tagName == null || !tagName.isString()) {

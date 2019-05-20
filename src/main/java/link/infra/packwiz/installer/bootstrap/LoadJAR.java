@@ -52,10 +52,6 @@ public class LoadJAR {
 	}
 	
 	public static String getVersion(String path) {
-		if (path == null) {
-			path = Main.JAR_NAME;
-		}
-		
 		JarInputStream jarStream;
 		try {
 			jarStream = new JarInputStream(new FileInputStream(path));
