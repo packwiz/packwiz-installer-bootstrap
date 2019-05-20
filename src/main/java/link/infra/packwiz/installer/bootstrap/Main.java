@@ -8,6 +8,9 @@ import java.io.InterruptedIOException;
 import java.io.Reader;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,8 +38,7 @@ public class Main {
 	private boolean skipUpdate = false;
 	private boolean useGUI = true;
 	private String jarPath = null;
-	
-	//private Lock 
+	private String accessToken = null;
 
 	public static void main(String[] args) {
 		new Main(args); // Is this bad?
@@ -107,13 +109,29 @@ public class Main {
 			System.out.println("Attempting to update...");
 			RollbackHandler backup = new RollbackHandler(jarPath);
 
-			downloadUpdate(ghRelease.downloadURL, jarPath);
-
 			try {
-				backup.rollback();
+				downloadUpdate(ghRelease.downloadURL, ghRelease.assetURL, jarPath);
+			} catch (InterruptedIOException e) {
+				// User did this, don't show the error
+				try {
+					backup.rollback();
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+				return;
 			} catch (IOException e) {
-				e.printStackTrace();
+				showError(e, "Update download failed, attempting to rollback:");
+				try {
+					backup.rollback();
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+				return;
 			}
+			
+			// Assist with GC a bit, probably not necessary
+			backup = null;
+			System.out.println("Update successful!");
 		} else {
 			System.out.println("Already up to date!");
 		}
@@ -134,6 +152,7 @@ public class Main {
 	private void parseOptions(String[] args) throws ParseException {
 		Options options = new Options();
 		options.addOption(null, "bootstrap-update-url", true, "Github API URL for checking for updates");
+		options.addOption(null, "bootstrap-update-token", true, "Github API Access Token, for private repositories");
 		options.addOption(null, "bootstrap-no-update", false, "Don't update packwiz-installer");
 		options.addOption(null, "bootstrap-main-jar", true, "Location of the packwiz-installer JAR file");
 		options.addOption("g", "no-gui", false, "Don't display a GUI to show update progress");
@@ -159,6 +178,10 @@ public class Main {
 
 		if (cmd.hasOption("bootstrap-update-url")) {
 			updateURL = cmd.getOptionValue("bootstrap-update-url");
+		}
+		
+		if (cmd.hasOption("bootstrap-update-token")) {
+			accessToken = cmd.getOptionValue("bootstrap-update-token");
 		}
 
 		if (cmd.hasOption("bootstrap-no-update")) {
@@ -196,6 +219,7 @@ public class Main {
 	private class Release {
 		String tagName = null;
 		String downloadURL = null;
+		String assetURL = null;
 	}
 
 	private class GithubException extends Exception {
@@ -226,11 +250,16 @@ public class Main {
 		
 		private void setup() throws IOException {
 			if (in == null) {
-				mon.setProgress(0);
-				size = conn.getContentLength();
-				in = conn.getInputStream();
-				if (size > -1) {
-					mon.setMaximum(size);
+				try {
+					mon.setProgress(0);
+					size = conn.getContentLength();
+					in = conn.getInputStream();
+					if (size > -1) {
+						mon.setMaximum(size);
+					}
+				} catch (IOException e) {
+					mon.close();
+					throw e;
 				}
 			}
 		}
@@ -288,12 +317,15 @@ public class Main {
 		Release rel = new Release();
 
 		URL url = new URL(updateURL);
+		if (accessToken != null) {
+			url = new URL(updateURL + "?access_token=" + accessToken);
+		}
 		URLConnection conn = url.openConnection();
 		// 30 second read timeout
 		conn.setReadTimeout(30 * 1000);
 		InputStream in;
 		if (useGUI) {
-			in = new ConnMonitorInputStream(conn, "Updating packwiz-installer...", null);
+			in = new ConnMonitorInputStream(conn, "Checking for packwiz-installer updates...", null);
 		} else {
 			in = conn.getInputStream();
 		}
@@ -334,6 +366,12 @@ public class Main {
 				throw new GithubException("Asset Download URL cannot be found");
 			}
 			rel.downloadURL = downloadURL.asString();
+			
+			JsonValue assetURL = asset.get("url");
+			if (assetURL == null || !assetURL.isString()) {
+				throw new GithubException("Asset Download URL cannot be found");
+			}
+			rel.assetURL = assetURL.asString();
 			break;
 		}
 		if (rel.tagName == null) {
@@ -343,8 +381,24 @@ public class Main {
 		return rel;
 	}
 
-	private void downloadUpdate(String downloadURL, String path) {
-
+	private void downloadUpdate(String downloadURL, String assetURL, String path) throws IOException {
+		URL url = new URL(downloadURL);
+		if (accessToken != null) {
+			//url = new URL(downloadURL + "?access_token=" + accessToken);
+			// Authenticated downloads use the assetURL
+			url = new URL(assetURL + "?access_token=" + accessToken);
+		}
+		URLConnection conn = url.openConnection();
+		conn.addRequestProperty("Accept", "application/octet-stream");
+		// 30 second read timeout
+		conn.setReadTimeout(30 * 1000);
+		InputStream in;
+		if (useGUI) {
+			in = new ConnMonitorInputStream(conn, "Updating packwiz-installer...", null);
+		} else {
+			in = conn.getInputStream();
+		}
+		Files.copy(in, Paths.get(path), StandardCopyOption.REPLACE_EXISTING);
 	}
 
 }
