@@ -399,6 +399,7 @@ public class Main {
 			in = conn.getInputStream();
 		}
 		Files.copy(in, Paths.get(path), StandardCopyOption.REPLACE_EXISTING);
+		in.close();
 	}
 
 }
