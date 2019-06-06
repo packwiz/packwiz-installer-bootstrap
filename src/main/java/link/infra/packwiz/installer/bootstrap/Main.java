@@ -140,6 +140,8 @@ public class Main {
 	private void showError(Exception e, String message) {
 		if (useGUI) {
 			e.printStackTrace();
+			// NOTE: Due to Swing being unmultithreaded, this will break when the installer UI actually starts!
+			// I added a big catchall exception handler into the installer to mitigate this, but it's not ideal.
 			JOptionPane.showMessageDialog(null,
 					message + "\n" + e.getClass().getCanonicalName() + ": " + e.getMessage(),
 					"packwiz-installer-bootstrap", JOptionPane.ERROR_MESSAGE);
