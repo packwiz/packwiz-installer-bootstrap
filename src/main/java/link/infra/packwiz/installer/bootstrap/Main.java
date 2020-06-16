@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
 import java.io.Reader;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Files;
@@ -13,6 +14,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.JOptionPane;
 import javax.swing.ProgressMonitor;
@@ -57,13 +59,11 @@ public class Main {
 		}
 
 		if (useGUI) {
-			EventQueue.invokeLater(new Runnable() {
-				public void run() {
-					try {
-						UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-					} catch (Exception e) {
-						// Ignore the exceptions, just continue using the ugly L&F
-					}
+			EventQueue.invokeLater(() -> {
+				try {
+					UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+				} catch (Exception e) {
+					// Ignore the exceptions, just continue using the ugly L&F
 				}
 			});
 		}
@@ -140,11 +140,14 @@ public class Main {
 	private void showError(Exception e, String message) {
 		if (useGUI) {
 			e.printStackTrace();
-			// NOTE: Due to Swing being unmultithreaded, this will break when the installer UI actually starts!
-			// I added a big catchall exception handler into the installer to mitigate this, but it's not ideal.
-			JOptionPane.showMessageDialog(null,
+			try {
+				EventQueue.invokeAndWait(() -> JOptionPane.showMessageDialog(null,
 					message + "\n" + e.getClass().getCanonicalName() + ": " + e.getMessage(),
-					"packwiz-installer-bootstrap", JOptionPane.ERROR_MESSAGE);
+					"packwiz-installer-bootstrap", JOptionPane.ERROR_MESSAGE));
+			} catch (InterruptedException | InvocationTargetException ex) {
+				System.out.println("Unexpected interruption while showing error message");
+				ex.printStackTrace();
+			}
 		} else {
 			System.out.println(message);
 			e.printStackTrace();
@@ -241,19 +244,21 @@ public class Main {
 		private int size = -1;
 		private int bytesRead = 0;
 		private final URLConnection conn;
-		private final ProgressMonitor mon;
+		private ProgressMonitor mon;
 
 		public ConnMonitorInputStream(URLConnection conn, String message, String note) {
 			this.conn = conn;
-			mon = new ProgressMonitor(null, message, note, 0, 1);
-			mon.setMillisToDecideToPopup(1);
-			mon.setMillisToPopup(1);
+			EventQueue.invokeLater(() -> {
+				mon = new ProgressMonitor(null, message, note, 0, 1);
+				mon.setMillisToDecideToPopup(1);
+				mon.setMillisToPopup(1);
+			});
 		}
 		
 		private void setup() throws IOException {
 			if (in == null) {
 				try {
-					mon.setProgress(0);
+					EventQueue.invokeLater(() -> mon.setProgress(0));
 					size = conn.getContentLength();
 					in = conn.getInputStream();
 					if (size > -1) {
@@ -273,12 +278,24 @@ public class Main {
 				return 1;
 			}
 		}
+
+		private final AtomicBoolean wasCancelled = new AtomicBoolean();
+		private long lastMillisUpdated = System.currentTimeMillis() - 110;
 		
 		private void setProgress() throws InterruptedIOException {
-			if (size > -1) {
-				mon.setProgress(bytesRead);
+			// Update at most once every 100 ms
+			if (System.currentTimeMillis() - lastMillisUpdated < 100) {
+				return;
 			}
-			if (mon.isCanceled()) {
+			lastMillisUpdated = System.currentTimeMillis();
+			final int progress = size > -1 ? bytesRead : -1;
+			EventQueue.invokeLater(() -> {
+				if (progress > -1) {
+					mon.setProgress(progress);
+				}
+				wasCancelled.set(mon.isCanceled());
+			});
+			if (wasCancelled.get()) {
 				throw new InterruptedIOException("Download cancelled!");
 			}
 		}
@@ -311,7 +328,10 @@ public class Main {
 		
 		public void close() throws IOException {
 			super.close();
-			mon.close();
+			EventQueue.invokeLater(() -> mon.close());
+			if (wasCancelled.get()) {
+				throw new InterruptedIOException("Download cancelled!");
+			}
 		}
 	}
 
