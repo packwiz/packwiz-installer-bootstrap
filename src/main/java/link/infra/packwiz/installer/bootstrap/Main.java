@@ -128,9 +128,7 @@ public class Main {
 				}
 				return;
 			}
-			
-			// Assist with GC a bit, probably not necessary
-			backup = null;
+
 			System.out.println("Update successful!");
 		} else {
 			System.out.println("Already up to date!");
@@ -201,7 +199,7 @@ public class Main {
 	// Remove invalid arguments, because Commons CLI chokes on invalid arguments
 	// (that should be passed to packwiz-installer)
 	private String[] filterArgs(String[] args, Options options) {
-		List<String> argsList = new ArrayList<String>(args.length);
+		List<String> argsList = new ArrayList<>(args.length);
 		boolean prevOptWasArg = false;
 		for (String arg : args) {
 			if (arg.charAt(0) == '-' && options.hasOption(arg)) {
@@ -221,13 +219,13 @@ public class Main {
 		return argsList.toArray(new String[0]);
 	}
 
-	private class Release {
+	private static class Release {
 		String tagName = null;
 		String downloadURL = null;
 		String assetURL = null;
 	}
 
-	private class GithubException extends Exception {
+	private static class GithubException extends Exception {
 		private static final long serialVersionUID = 3843811090801607241L;
 
 		public GithubException() {
@@ -239,7 +237,7 @@ public class Main {
 		}
 	}
 	
-	class ConnMonitorInputStream extends InputStream {
+	static class ConnMonitorInputStream extends InputStream {
 		private InputStream in = null;
 		private int size = -1;
 		private int bytesRead = 0;

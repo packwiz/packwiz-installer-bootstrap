@@ -17,7 +17,7 @@ public class RollbackHandler {
 			storage = Files.readAllBytes(rollbackPath);
 			hasRollback = true;
 		// Ignore errors, it probably doesn't exist!
-		} catch (IOException e) {}
+		} catch (IOException ignored) {}
 	}
 
 	public void rollback() throws IOException {

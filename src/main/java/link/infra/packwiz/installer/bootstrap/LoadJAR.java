@@ -44,7 +44,7 @@ public class LoadJAR {
 		return true;
 	}
 	
-	public static void start(String[] args, String path) throws ClassNotFoundException, Exception {
+	public static void start(String[] args, String path) throws Exception {
 		loadClass(path);
 		
 		// Must be casted to Object (not array) because varargs
@@ -63,12 +63,12 @@ public class LoadJAR {
 		try {
 			Manifest mf = jarStream.getManifest();
 			version = mf.getMainAttributes().getValue("Implementation-Version");
-		} catch (Exception e) {}
+		} catch (Exception ignored) {}
 		
 		// Clean up
 		try {
 			jarStream.close();
-		} catch (IOException e) {}
+		} catch (IOException ignored) {}
 		return version;
 	}
 }
