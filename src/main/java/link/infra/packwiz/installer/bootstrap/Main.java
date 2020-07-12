@@ -256,14 +256,16 @@ public class Main {
 		private void setup() throws IOException {
 			if (in == null) {
 				try {
-					EventQueue.invokeLater(() -> mon.setProgress(0));
 					size = conn.getContentLength();
 					in = conn.getInputStream();
-					if (size > -1) {
-						mon.setMaximum(size);
-					}
+					EventQueue.invokeLater(() -> {
+						mon.setProgress(0);
+						if (size > -1) {
+							mon.setMaximum(size);
+						}
+					});
 				} catch (IOException e) {
-					mon.close();
+					EventQueue.invokeLater(() -> mon.close());
 					throw e;
 				}
 			}
