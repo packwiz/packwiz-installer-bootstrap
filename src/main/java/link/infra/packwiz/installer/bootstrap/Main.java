@@ -43,7 +43,7 @@ public class Main {
 	private String accessToken = null;
 
 	public static void main(String[] args) {
-		new Main(args); // Is this bad?
+		new Main(args);
 	}
 
 	public Main(String[] args) {
