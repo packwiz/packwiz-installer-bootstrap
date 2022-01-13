@@ -1,5 +1,7 @@
 package link.infra.packwiz.installer.bootstrap;
 
+import org.apache.commons.cli.Options;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -9,8 +11,6 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
-
-import org.apache.commons.cli.Options;
 
 public class LoadJAR {
 	
@@ -22,7 +22,7 @@ public class LoadJAR {
 		}
 		
 		if (path == null) {
-			path = Main.JAR_NAME;
+			path = Init.JAR_NAME;
 		}
 		
 		URLClassLoader child = new URLClassLoader(new URL[] { new File(path).toURI().toURL() },
