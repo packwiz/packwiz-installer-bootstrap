@@ -36,7 +36,7 @@ public class Main {
 			throw new RuntimeException("Failed to read packwiz-installer-bootstrap.properties", e);
 		}
 
-		Init.main(args);
+		Bootstrap.init(args);
 	}
 
 	private static boolean attemptChainload(Properties props, String[] args) {

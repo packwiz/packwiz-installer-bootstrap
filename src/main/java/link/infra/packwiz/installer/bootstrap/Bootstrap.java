@@ -16,25 +16,19 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
-public class Init {
+public class Bootstrap {
 
 	private static final String DEFAULT_UPDATE_URL = "https://api.github.com/repos/comp500/packwiz-installer/releases/latest";
 	public static final String JAR_NAME = "packwiz-installer.jar";
 
-	private String updateURL = DEFAULT_UPDATE_URL;
-	private boolean skipUpdate = false;
-	private boolean useGUI = true;
-	private String jarPath = null;
-	private String accessToken = null;
+	private static String updateURL = DEFAULT_UPDATE_URL;
+	private static boolean skipUpdate = false;
+	private static boolean useGUI = true;
+	private static String jarPath = null;
+	private static String accessToken = null;
 
-	public static void main(String[] args) {
-		// TODO: refactor to static methods
-		new Init(args);
-	}
-
-	public Init(String[] args) {
+	public static void init(String[] args) {
 		try {
 			parseOptions(args);
 		} catch (ParseException e) {
@@ -83,7 +77,7 @@ public class Init {
 		}
 	}
 
-	private void doUpdate() throws IOException, GithubException {
+	private static void doUpdate() throws IOException, GithubException {
 		String currVersion = LoadJAR.getVersion(jarPath);
 		Release ghRelease = requestRelease();
 		
@@ -123,7 +117,7 @@ public class Init {
 		}
 	}
 
-	private void showError(Exception e, String message) {
+	private static void showError(Exception e, String message) {
 		if (useGUI) {
 			e.printStackTrace();
 			try {
@@ -140,7 +134,7 @@ public class Init {
 		}
 	}
 
-	private void parseOptions(String[] args) throws ParseException {
+	private static void parseOptions(String[] args) throws ParseException {
 		Options options = new Options();
 		options.addOption(null, "bootstrap-update-url", true, "Github API URL for checking for updates");
 		options.addOption(null, "bootstrap-update-token", true, "Github API Access Token, for private repositories");
@@ -186,7 +180,7 @@ public class Init {
 
 	// Remove invalid arguments, because Commons CLI chokes on invalid arguments
 	// (that should be passed to packwiz-installer)
-	private String[] filterArgs(String[] args, Options options) {
+	private static String[] filterArgs(String[] args, Options options) {
 		List<String> argsList = new ArrayList<>(args.length);
 		boolean prevOptWasArg = false;
 		for (String arg : args) {
@@ -224,106 +218,8 @@ public class Init {
 			super("Invalid Github API response: " + message);
 		}
 	}
-	
-	static class ConnMonitorInputStream extends InputStream {
-		private InputStream in = null;
-		private int size = -1;
-		private int bytesRead = 0;
-		private final URLConnection conn;
-		private ProgressMonitor mon;
 
-		public ConnMonitorInputStream(URLConnection conn, String message, String note) {
-			this.conn = conn;
-			EventQueue.invokeLater(() -> {
-				mon = new ProgressMonitor(null, message, note, 0, 1);
-				mon.setMillisToDecideToPopup(1);
-				mon.setMillisToPopup(1);
-			});
-		}
-		
-		private void setup() throws IOException {
-			if (in == null) {
-				try {
-					size = conn.getContentLength();
-					in = conn.getInputStream();
-					EventQueue.invokeLater(() -> {
-						mon.setProgress(0);
-						if (size > -1) {
-							mon.setMaximum(size);
-						}
-					});
-				} catch (IOException e) {
-					EventQueue.invokeLater(() -> mon.close());
-					throw e;
-				}
-			}
-		}
-
-		public int available() {
-			if (size > -1) {
-				return (size - bytesRead);
-			} else {
-				return 1;
-			}
-		}
-
-		private final AtomicBoolean wasCancelled = new AtomicBoolean();
-		private long lastMillisUpdated = System.currentTimeMillis() - 110;
-		
-		private void setProgress() throws InterruptedIOException {
-			// Update at most once every 100 ms
-			if (System.currentTimeMillis() - lastMillisUpdated < 100) {
-				return;
-			}
-			lastMillisUpdated = System.currentTimeMillis();
-			final int progress = size > -1 ? bytesRead : -1;
-			EventQueue.invokeLater(() -> {
-				if (progress > -1) {
-					mon.setProgress(progress);
-				}
-				wasCancelled.set(mon.isCanceled());
-			});
-			if (wasCancelled.get()) {
-				throw new InterruptedIOException("Download cancelled!");
-			}
-		}
-
-		public int read() throws IOException {
-			setup();
-			int b = in.read();
-			if (b != -1) {
-				bytesRead++;
-				setProgress();
-			}
-			return b;
-		}
-
-		public int read(byte[] b) throws IOException {
-			setup();
-			int read = in.read(b);
-			bytesRead += read;
-			setProgress();
-			return read;
-		}
-
-		public int read(byte[] b, int off, int len) throws IOException {
-			setup();
-			int read = in.read(b, off, len);
-			bytesRead += read;
-			setProgress();
-			return read;
-		}
-		
-		public void close() throws IOException {
-			super.close();
-			EventQueue.invokeLater(() -> mon.close());
-			if (wasCancelled.get()) {
-				throw new InterruptedIOException("Download cancelled!");
-			}
-		}
-	}
-
-	private Release requestRelease() throws IOException, GithubException {
+	private static Release requestRelease() throws IOException, GithubException {
 		Release rel = new Release();
 
 		URL url = new URL(updateURL);
@@ -391,7 +287,7 @@ public class Init {
 		return rel;
 	}
 
-	private void downloadUpdate(String downloadURL, String assetURL, String path) throws IOException {
+	private static void downloadUpdate(String downloadURL, String assetURL, String path) throws IOException {
 		URL url = new URL(downloadURL);
 		if (accessToken != null) {
 			//url = new URL(downloadURL + "?access_token=" + accessToken);

@@ -22,7 +22,7 @@ public class LoadJAR {
 		}
 		
 		if (path == null) {
-			path = Init.JAR_NAME;
+			path = Bootstrap.JAR_NAME;
 		}
 		
 		URLClassLoader child = new URLClassLoader(new URL[] { new File(path).toURI().toURL() },
