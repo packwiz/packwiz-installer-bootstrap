@@ -290,7 +290,7 @@ public class Bootstrap {
 	private static void downloadUpdate(String downloadURL, String assetURL, String path) throws IOException {
 		URL url = new URL(downloadURL);
 		if (accessToken != null) {
-			conn.addRequestProperty("Authorization", "token " + accessToken)
+			conn.addRequestProperty("Authorization", "token " + accessToken);
 		}
 		URLConnection conn = url.openConnection();
 		conn.addRequestProperty("Accept", "application/octet-stream");
