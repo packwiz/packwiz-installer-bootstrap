@@ -289,13 +289,11 @@ public class Bootstrap {
 
 	private static void downloadUpdate(String downloadURL, String assetURL, String path) throws IOException {
 		URL url = new URL(downloadURL);
-		if (accessToken != null) {
-			//url = new URL(downloadURL + "?access_token=" + accessToken);
-			// Authenticated downloads use the assetURL
-			url = new URL(assetURL + "?access_token=" + accessToken);
-		}
 		URLConnection conn = url.openConnection();
 		conn.addRequestProperty("Accept", "application/octet-stream");
+		if (accessToken != null) {
+			conn.addRequestProperty("Authorization", "token " + accessToken);
+		}
 		// 30 second read timeout
 		conn.setReadTimeout(30 * 1000);
 		InputStream in;
