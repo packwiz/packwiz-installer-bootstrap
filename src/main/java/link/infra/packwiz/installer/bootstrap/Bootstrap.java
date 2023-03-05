@@ -223,10 +223,9 @@ public class Bootstrap {
 		Release rel = new Release();
 
 		URL url = new URL(updateURL);
-		if (accessToken != null) {
-			url = new URL(updateURL + "?access_token=" + accessToken);
-		}
 		URLConnection conn = url.openConnection();
+
+		addAuthorizationHeader(conn);
 		// 30 second read timeout
 		conn.setReadTimeout(30 * 1000);
 		InputStream in;
@@ -288,11 +287,9 @@ public class Bootstrap {
 
 	private static void downloadUpdate(String downloadURL, String assetURL, String path) throws IOException {
 		URL url = new URL(downloadURL);
-		if (accessToken != null) {
-			// Authenticated downloads use the assetURL
-			url = new URL(assetURL + "?access_token=" + accessToken);
-		}
 		URLConnection conn = url.openConnection();
+
+		addAuthorizationHeader(conn);
 		conn.addRequestProperty("Accept", "application/octet-stream");
 		// 30 second read timeout
 		conn.setReadTimeout(30 * 1000);
@@ -304,6 +301,13 @@ public class Bootstrap {
 		}
 		Files.copy(in, Paths.get(path), StandardCopyOption.REPLACE_EXISTING);
 		in.close();
+	}
+
+	private static void addAuthorizationHeader(URLConnection conn) {
+		if (accessToken != null) {
+			// Authenticated downloads use the assetURL
+			conn.addRequestProperty("Authorization", accessToken);
+		}
 	}
 
 }
