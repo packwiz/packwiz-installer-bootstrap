@@ -261,11 +261,11 @@ public class Bootstrap {
 			}
 			JsonObject asset = assetValue.asObject();
 			JsonValue name = asset.get("name");
-			if (name == null || !name.isString()) {
-				throw new GithubException("Asset name cannot be found");
-			}
 			if (!name.asString().equalsIgnoreCase(JAR_NAME)) {
 				continue;
+			}
+			if (name == null || !name.isString()) {
+				throw new GithubException("Asset name cannot be found");
 			}
 			JsonValue downloadURL = asset.get("browser_download_url");
 			if (downloadURL == null || !downloadURL.isString()) {
