@@ -245,11 +245,7 @@ public class Bootstrap {
 		}
 		streamReader.close();
 
-		JsonValue tagName = object.get("tag_name");
-		if (tagName == null || !tagName.isString()) {
-			throw new GithubException("Tag name cannot be found");
-		}
-		rel.tagName = tagName.asString();
+		rel.tagName = getStringProperty("tag_name", object, "Tag name");
 
 		JsonValue assets = object.get("assets");
 		if (assets == null || !assets.isArray()) {
@@ -259,25 +255,16 @@ public class Bootstrap {
 			if (!assetValue.isObject()) {
 				throw new GithubException();
 			}
+
 			JsonObject asset = assetValue.asObject();
-			JsonValue name = asset.get("name");
-			if (!name.asString().equalsIgnoreCase(JAR_NAME)) {
+			String name = getStringProperty("name", asset, "Asset name");
+
+			if (!name.equalsIgnoreCase(JAR_NAME)) {
 				continue;
 			}
-			if (name == null || !name.isString()) {
-				throw new GithubException("Asset name cannot be found");
-			}
-			JsonValue downloadURL = asset.get("browser_download_url");
-			if (downloadURL == null || !downloadURL.isString()) {
-				throw new GithubException("Asset Download URL cannot be found");
-			}
-			rel.downloadURL = downloadURL.asString();
-			
-			JsonValue assetURL = asset.get("url");
-			if (assetURL == null || !assetURL.isString()) {
-				throw new GithubException("Asset Download URL cannot be found");
-			}
-			rel.assetURL = assetURL.asString();
+
+			rel.downloadURL = getAssetUrl("browser_download_url", asset);
+			rel.assetURL = getAssetUrl("url", asset);
 			break;
 		}
 		if (rel.tagName == null) {
@@ -285,6 +272,18 @@ public class Bootstrap {
 		}
 
 		return rel;
+	}
+
+	private static String getAssetUrl(String property, JsonObject asset) throws GithubException {
+		return getStringProperty(property, asset, "Asset Download URL property");
+	}
+	
+	private static String getStringProperty(String property, JsonObject obj, String displayName) throws GithubException {
+		JsonValue value = obj.get(property);
+		if (value == null || !value.isString()) {
+			throw new GithubException("$displayName (" + property + ") cannot be found");
+		}
+		return value.asString();
 	}
 
 	private static void downloadUpdate(String downloadURL, String assetURL, String path) throws IOException {
