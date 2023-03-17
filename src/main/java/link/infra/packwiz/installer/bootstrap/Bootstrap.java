@@ -280,7 +280,7 @@ public class Bootstrap {
 	private static String getStringProperty(String property, JsonObject obj, String displayName) throws GithubException {
 		JsonValue value = obj.get(property);
 		if (value == null || !value.isString()) {
-			throw new GithubException("$displayName (" + property + ") cannot be found");
+			throw new GithubException(displayName + " (" + property + ") cannot be found");
 		}
 		return value.asString();
 	}
