@@ -14,12 +14,18 @@ repositories {
     jcenter()
 }
 
-mainClassName = 'link.infra.packwiz.installer.bootstrap.Main'
+File testProjectDirectory = rootProject.getBuildDir().toPath().resolve("test-project").toFile()
+testProjectDirectory.mkdirs()
+
+application {
+    mainClassName = 'link.infra.packwiz.installer.bootstrap.Main'
+
+    // Change the working directory for the run task. Here is an example:
+    tasks.run.workingDir = testProjectDirectory
+}
 
 jar {
     manifest {
-        attributes(
-            'Main-Class': 'link.infra.packwiz.installer.bootstrap.Main'
-        )
+        attributes('Main-Class': 'link.infra.packwiz.installer.bootstrap.Main')
     }
 }
