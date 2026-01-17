@@ -1,7 +1,7 @@
 plugins {
     id 'java'
     id 'application'
-    id 'com.github.johnrengelman.shadow' version '5.0.0'
+    id 'com.gradleup.shadow' version '8.3.9'
 }
 
 dependencies {
@@ -11,14 +11,14 @@ dependencies {
 }
 
 repositories {
-    jcenter()
+    mavenCentral()
 }
 
 File testProjectDirectory = rootProject.getBuildDir().toPath().resolve("test-project").toFile()
 testProjectDirectory.mkdirs()
 
 application {
-    mainClassName = 'link.infra.packwiz.installer.bootstrap.Main'
+    mainClass = 'link.infra.packwiz.installer.bootstrap.Main'
 
     // Change the working directory for the run task. Here is an example:
     tasks.run.workingDir = testProjectDirectory
